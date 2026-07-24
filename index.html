@@ -1805,15 +1805,44 @@ const studentRef = window.ref(db, `teachers/${teacherId}/students/${studentId}`)
             }
         }
 
-        async function addPaymentWeek(weekData) {
-            if (!isFirebaseConnected) {
-                throw new Error('ไม่สามารถเชื่อมต่อ Firebase ได้');
-            }
+       async function addPaymentWeek(weekData) {
+    if (!isFirebaseConnected) {
+        throw new Error('ไม่สามารถเชื่อมต่อ Firebase ได้');
+    }
 
-            if (!currentUser || !currentUser.uid) {
-                throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
-            }
+    if (!currentUser) {
+        throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
+    }
 
+    try {
+        let teacherId = currentUser.uid;
+
+        if (currentUser.role === 'treasurer') {
+            const studentData = await getStudentData(currentUser.studentId);
+            if (studentData && studentData.teacherId) {
+                teacherId = studentData.teacherId;
+            }
+        }
+
+        const weeksRef = window.ref(db, `teachers/${teacherId}/weeks`);
+        const newWeekRef = window.push(weeksRef);
+
+        await window.set(newWeekRef, {
+            ...weekData,
+            teacherId: teacherId,
+            createdAt: window.serverTimestamp()
+        });
+
+        currentWeek = {
+            id: newWeekRef.key,
+            ...weekData
+        };
+
+        return newWeekRef;
+    } catch (error) {
+        throw error;
+    }
+}
             try {
                 // Add week under current teacher's data
                 const weeksRef = window.ref(db, `teachers/${currentUser.uid}/weeks`);
