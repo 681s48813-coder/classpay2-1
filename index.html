@@ -1779,16 +1779,12 @@ const firebaseConfig = {
                 }
 
                 // Update student under current teacher's data
-                const teacherId = currentUser.role === 'treasurer'
-    ? (await getStudentData(currentUser.studentId)).teacherId
-    : currentUser.uid;
-
-const studentRef = window.ref(db, `teachers/${teacherId}/students/${studentId}`);
+                const studentRef = window.ref(db, `teachers/${currentUser.uid}/students/${studentId}`);
                 await window.update(studentRef, updateData);
 
                 // Also record payment history under current teacher
                 if (paid && currentWeek) {
-                    const paymentsRef = window.ref(db, `teachers/${teacherId}/payments`);
+                    const paymentsRef = window.ref(db, `teachers/${currentUser.uid}/payments`);
                     const newPaymentRef = window.push(paymentsRef);
                     await window.set(newPaymentRef, {
                         studentId: studentId,
@@ -1796,7 +1792,7 @@ const studentRef = window.ref(db, `teachers/${teacherId}/students/${studentId}`)
                         week: currentWeek.week,
                         amount: paidAmount || currentWeek.amount,
                         standardAmount: currentWeek.amount,
-                        teacherId: teacherId,
+                        teacherId: currentUser.uid,
                         paidAt: window.serverTimestamp()
                     });
                 }
@@ -1805,44 +1801,15 @@ const studentRef = window.ref(db, `teachers/${teacherId}/students/${studentId}`)
             }
         }
 
-       async function addPaymentWeek(weekData) {
-    if (!isFirebaseConnected) {
-        throw new Error('ไม่สามารถเชื่อมต่อ Firebase ได้');
-    }
-
-    if (!currentUser) {
-        throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
-    }
-
-    try {
-        let teacherId = currentUser.uid;
-
-        if (currentUser.role === 'treasurer') {
-            const studentData = await getStudentData(currentUser.studentId);
-            if (studentData && studentData.teacherId) {
-                teacherId = studentData.teacherId;
+        async function addPaymentWeek(weekData) {
+            if (!isFirebaseConnected) {
+                throw new Error('ไม่สามารถเชื่อมต่อ Firebase ได้');
             }
-        }
 
-        const weeksRef = window.ref(db, `teachers/${teacherId}/weeks`);
-        const newWeekRef = window.push(weeksRef);
+            if (!currentUser || !currentUser.uid) {
+                throw new Error('ไม่พบข้อมูลผู้ใช้งาน');
+            }
 
-        await window.set(newWeekRef, {
-            ...weekData,
-            teacherId: teacherId,
-            createdAt: window.serverTimestamp()
-        });
-
-        currentWeek = {
-            id: newWeekRef.key,
-            ...weekData
-        };
-
-        return newWeekRef;
-    } catch (error) {
-        throw error;
-    }
-}
             try {
                 // Add week under current teacher's data
                 const weeksRef = window.ref(db, `teachers/${currentUser.uid}/weeks`);
@@ -2703,10 +2670,7 @@ const studentRef = window.ref(db, `teachers/${teacherId}/students/${studentId}`)
             
             students.forEach(student => {
                 // Check if student paid for this specific week
-                const paidForThisWeek =
-    student.paid === true &&
-    student.weekId &&
-    student.weekId === selectedWeekId;
+                const paidForThisWeek = student.weekId === selectedWeekId && student.paid;
                 
                 const card = document.createElement('div');
                 card.className = `bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-gray-200 hover:shadow-lg transition-all ${paidForThisWeek ? 'border-green-300 bg-green-50/50' : 'border-red-300 bg-red-50/50'}`;
@@ -2792,14 +2756,7 @@ const studentRef = window.ref(db, `teachers/${teacherId}/students/${studentId}`)
                 let totalPaidStudents = 0;
                 
                 // Count paid students across all weeks
-                let teacherId = currentUser.uid;
-
-if (currentUser.role === 'treasurer') {
-    const studentData = await getStudentData(currentUser.studentId);
-    teacherId = studentData.teacherId;
-}
-
-const paymentsRef = window.ref(db, `teachers/${teacherId}/payments`);
+                const paymentsRef = window.ref(db, 'payments');
                 const paymentsSnapshot = await window.get(paymentsRef);
                 const uniquePaidStudents = new Set();
                 
@@ -3358,29 +3315,21 @@ const paymentsRef = window.ref(db, `teachers/${teacherId}/payments`);
                 }
                 
                 // Reset all students' payment status for this week in current teacher's data
-                // Reset students who paid this week
-const studentsRef = window.ref(db, `teachers/${currentUser.uid}/students`);
-const studentsSnapshot = await window.get(studentsRef);
-
-if (studentsSnapshot.exists()) {
-    const studentsData = studentsSnapshot.val();
-    const updates = {};
-
-    Object.keys(studentsData).forEach(studentId => {
-        if (
-            studentsData[studentId].weekId &&
-            studentsData[studentId].weekId === weekToDelete.id
-        ) {
-            updates[`teachers/${currentUser.uid}/students/${studentId}/paid`] = false;
-            updates[`teachers/${currentUser.uid}/students/${studentId}/weekId`] = null;
-            updates[`teachers/${currentUser.uid}/students/${studentId}/paidAmount`] = null;
-        }
-    });
-
-    if (Object.keys(updates).length > 0) {
-        await window.update(window.ref(db), updates);
-    }
-}
+                const studentsRef = window.ref(db, `teachers/${currentUser.uid}/students`);
+                const studentsSnapshot = await window.get(studentsRef);
+                if (studentsSnapshot.exists()) {
+                    const studentsData = studentsSnapshot.val();
+                    const updates = {};
+                    Object.keys(studentsData).forEach(studentId => {
+                        if (studentsData[studentId].weekId === weekToDelete.id) {
+                            updates[`teachers/${currentUser.uid}/students/${studentId}/paid`] = false;
+                            updates[`teachers/${currentUser.uid}/students/${studentId}/weekId`] = null;
+                        }
+                    });
+                    if (Object.keys(updates).length > 0) {
+                        await window.update(window.ref(db), updates);
+                    }
+                }
                 
                 // Reload data
                 await loadCurrentWeek();
@@ -4013,10 +3962,7 @@ if (studentsSnapshot.exists()) {
                 }
 
                 // Check current payment status for this specific week
-                const currentPaidStatus =
-    student.paid &&
-    student.weekId &&
-    student.weekId === selectedWeekId;
+                const currentPaidStatus = student.weekId === selectedWeekId && student.paid;
                 const newPaidStatus = !currentPaidStatus;
                 
                 let paidAmount = null;
@@ -4046,16 +3992,14 @@ if (studentsSnapshot.exists()) {
                 
                 // Update local data immediately
                 student.paid = newPaidStatus;
-student.weekId = newPaidStatus ? selectedWeekId : null;
-student.paidAmount = newPaidStatus ? paidAmount : null;
+                student.weekId = newPaidStatus ? selectedWeekId : null;
+                student.paidAmount = newPaidStatus ? paidAmount : null;
                 
-               // รีโหลดข้อมูลทั้งหมด
-await loadStudents();
-updateStudentsTable();
-await updateClassMoneySummary();
-updateAdminStats();
-
-const action = newPaidStatus ? 'จ่ายแล้ว' : 'ยกเลิกการจ่าย';
+                // Update UI immediately without full reload
+                updateSingleStudentUI(studentId, newPaidStatus, paidAmount);
+                updateAdminStats();
+                
+                const action = newPaidStatus ? 'จ่ายแล้ว' : 'ยกเลิกการจ่าย';
                 const amountText = newPaidStatus && paidAmount ? ` (${paidAmount.toLocaleString()} บาท)` : '';
                 showNotification(`✅ อัพเดทสถานะ ${student.name} เป็น ${action}${amountText}`, 'success');
                 
