@@ -1779,12 +1779,16 @@ const firebaseConfig = {
                 }
 
                 // Update student under current teacher's data
-                const studentRef = window.ref(db, `teachers/${currentUser.uid}/students/${studentId}`);
+                const teacherId = currentUser.role === 'treasurer'
+    ? (await getStudentData(currentUser.studentId)).teacherId
+    : currentUser.uid;
+
+const studentRef = window.ref(db, `teachers/${teacherId}/students/${studentId}`);
                 await window.update(studentRef, updateData);
 
                 // Also record payment history under current teacher
                 if (paid && currentWeek) {
-                    const paymentsRef = window.ref(db, `teachers/${currentUser.uid}/payments`);
+                    const paymentsRef = window.ref(db, `teachers/${teacherId}/payments`);
                     const newPaymentRef = window.push(paymentsRef);
                     await window.set(newPaymentRef, {
                         studentId: studentId,
@@ -1792,7 +1796,7 @@ const firebaseConfig = {
                         week: currentWeek.week,
                         amount: paidAmount || currentWeek.amount,
                         standardAmount: currentWeek.amount,
-                        teacherId: currentUser.uid,
+                        teacherId: teacherId,
                         paidAt: window.serverTimestamp()
                     });
                 }
@@ -2670,7 +2674,10 @@ const firebaseConfig = {
             
             students.forEach(student => {
                 // Check if student paid for this specific week
-                const paidForThisWeek = student.weekId === selectedWeekId && student.paid;
+                const paidForThisWeek =
+    student.paid === true &&
+    student.weekId &&
+    student.weekId === selectedWeekId;
                 
                 const card = document.createElement('div');
                 card.className = `bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-gray-200 hover:shadow-lg transition-all ${paidForThisWeek ? 'border-green-300 bg-green-50/50' : 'border-red-300 bg-red-50/50'}`;
@@ -2756,7 +2763,14 @@ const firebaseConfig = {
                 let totalPaidStudents = 0;
                 
                 // Count paid students across all weeks
-                const paymentsRef = window.ref(db, 'payments');
+                let teacherId = currentUser.uid;
+
+if (currentUser.role === 'treasurer') {
+    const studentData = await getStudentData(currentUser.studentId);
+    teacherId = studentData.teacherId;
+}
+
+const paymentsRef = window.ref(db, `teachers/${teacherId}/payments`);
                 const paymentsSnapshot = await window.get(paymentsRef);
                 const uniquePaidStudents = new Set();
                 
@@ -3970,7 +3984,10 @@ if (studentsSnapshot.exists()) {
                 }
 
                 // Check current payment status for this specific week
-                const currentPaidStatus = student.weekId === selectedWeekId && student.paid;
+                const currentPaidStatus =
+    student.paid &&
+    student.weekId &&
+    student.weekId === selectedWeekId;
                 const newPaidStatus = !currentPaidStatus;
                 
                 let paidAmount = null;
@@ -4000,14 +4017,16 @@ if (studentsSnapshot.exists()) {
                 
                 // Update local data immediately
                 student.paid = newPaidStatus;
-                student.weekId = newPaidStatus ? selectedWeekId : null;
-                student.paidAmount = newPaidStatus ? paidAmount : null;
+student.weekId = newPaidStatus ? selectedWeekId : null;
+student.paidAmount = newPaidStatus ? paidAmount : null;
                 
-                // Update UI immediately without full reload
-                updateSingleStudentUI(studentId, newPaidStatus, paidAmount);
-                updateAdminStats();
-                
-                const action = newPaidStatus ? 'จ่ายแล้ว' : 'ยกเลิกการจ่าย';
+               // รีโหลดข้อมูลทั้งหมด
+await loadStudents();
+updateStudentsTable();
+await updateClassMoneySummary();
+updateAdminStats();
+
+const action = newPaidStatus ? 'จ่ายแล้ว' : 'ยกเลิกการจ่าย';
                 const amountText = newPaidStatus && paidAmount ? ` (${paidAmount.toLocaleString()} บาท)` : '';
                 showNotification(`✅ อัพเดทสถานะ ${student.name} เป็น ${action}${amountText}`, 'success');
                 
