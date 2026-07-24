@@ -3349,16 +3349,7 @@ const firebaseConfig = {
                 
             } catch (error) {
                 console.error('Error deleting week:', error);
-                if (
-    error &&
-    error.message &&
-    !error.message.includes("Cannot read properties of null")
-) {
-    showNotification(
-        'เกิดข้อผิดพลาดในการลบสัปดาห์: ' + error.message,
-        'error'
-    );
-}
+                showNotification('เกิดข้อผิดพลาดในการลบสัปดาห์: ' + error.message, 'error');
             } finally {
                 confirmBtn.innerHTML = '<i class="fas fa-trash mr-2"></i> ลบสัปดาห์';
                 confirmBtn.disabled = false;
@@ -3939,7 +3930,7 @@ const firebaseConfig = {
             
             // Update button state based on amount validity
             if (isNaN(amount) || amount <= 0) {
-                button.disabled = true;button.classList.add('opacity-60');
+                button.disabled = true;
                 button.classList.add('opacity-50', 'cursor-not-allowed');
                 button.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i><span>ระบุจำนวนเงิน</span>';
             } else {
@@ -4127,33 +4118,10 @@ const firebaseConfig = {
 
         // Change Password Functions
         function openChangePasswordModal() {
-    const modal = document.getElementById('changePasswordModal');
-
-    if (!modal) {
-        showNotification('ไม่พบหน้าต่างเปลี่ยนรหัสผ่าน', 'error');
-        return;
-    }
-
-    modal.classList.remove('hidden');
-}
             document.getElementById('changePasswordModal').classList.remove('hidden');
         }
 
         function closeChangePasswordModal() {
-    const modal = document.getElementById('changePasswordModal');
-
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-
-    const current = document.getElementById('currentPassword');
-    const newPass = document.getElementById('newPassword');
-    const confirm = document.getElementById('confirmNewPassword');
-
-    if (current) current.value = '';
-    if (newPass) newPass.value = '';
-    if (confirm) confirm.value = '';
-}
             document.getElementById('changePasswordModal').classList.add('hidden');
             
             // Clear form
@@ -4453,17 +4421,9 @@ const firebaseConfig = {
                 showNotification('เกิดข้อผิดพลาดในการเริ่มต้นระบบ: ' + error.message, 'error');
                 showWelcome();
             } finally {
-                window.addEventListener('error', function (e) {
-    console.error(e);
-
-    showNotification(
-        'เกิดข้อผิดพลาดของระบบ กรุณาลองใหม่อีกครั้ง',
-        'error'
-    );
-});hideLoading();
+                hideLoading();
             }
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972f8ba1c184f4cf',t:'MTc1NTgzNjA4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><!-- Change Password Modal -->
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972f8ba1c184f4cf',t:'MTc1NTgzNjA4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
