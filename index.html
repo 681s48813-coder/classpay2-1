@@ -3315,21 +3315,29 @@ const firebaseConfig = {
                 }
                 
                 // Reset all students' payment status for this week in current teacher's data
-                const studentsRef = window.ref(db, `teachers/${currentUser.uid}/students`);
-                const studentsSnapshot = await window.get(studentsRef);
-                if (studentsSnapshot.exists()) {
-                    const studentsData = studentsSnapshot.val();
-                    const updates = {};
-                    Object.keys(studentsData).forEach(studentId => {
-                        if (studentsData[studentId].weekId === weekToDelete.id) {
-                            updates[`teachers/${currentUser.uid}/students/${studentId}/paid`] = false;
-                            updates[`teachers/${currentUser.uid}/students/${studentId}/weekId`] = null;
-                        }
-                    });
-                    if (Object.keys(updates).length > 0) {
-                        await window.update(window.ref(db), updates);
-                    }
-                }
+                // Reset students who paid this week
+const studentsRef = window.ref(db, `teachers/${currentUser.uid}/students`);
+const studentsSnapshot = await window.get(studentsRef);
+
+if (studentsSnapshot.exists()) {
+    const studentsData = studentsSnapshot.val();
+    const updates = {};
+
+    Object.keys(studentsData).forEach(studentId => {
+        if (
+            studentsData[studentId].weekId &&
+            studentsData[studentId].weekId === weekToDelete.id
+        ) {
+            updates[`teachers/${currentUser.uid}/students/${studentId}/paid`] = false;
+            updates[`teachers/${currentUser.uid}/students/${studentId}/weekId`] = null;
+            updates[`teachers/${currentUser.uid}/students/${studentId}/paidAmount`] = null;
+        }
+    });
+
+    if (Object.keys(updates).length > 0) {
+        await window.update(window.ref(db), updates);
+    }
+}
                 
                 // Reload data
                 await loadCurrentWeek();
